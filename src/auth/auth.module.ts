@@ -15,9 +15,9 @@ import { User, UserSchema } from './schemas/user.schema.js';
         JwtModule.registerAsync({
             imports: [ConfigModule],
             useFactory: (configService: ConfigService) => ({
-                secret: configService.get<string>('JWT_SECRET', 'youapp-secret-key'),
+                secret: configService.get<string>('app.jwt.secret'),
                 signOptions: {
-                    expiresIn: configService.get('JWT_EXPIRATION', '24h') as any,
+                    expiresIn: configService.get('app.jwt.expiration') as any,
                 },
             }),
             inject: [ConfigService],

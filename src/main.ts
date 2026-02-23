@@ -1,21 +1,31 @@
 import { NestFactory } from '@nestjs/core';
-import { ValidationPipe } from '@nestjs/common';
+import { Logger, ValidationPipe } from '@nestjs/common';
 import { NestExpressApplication } from '@nestjs/platform-express';
+import { ConfigService } from '@nestjs/config';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { join } from 'path';
 import { AppModule } from './app.module.js';
+import { LoggerInterceptor } from './common/interceptors/logger.interceptor.js';
 
 async function bootstrap() {
   const app = await NestFactory.create<NestExpressApplication>(AppModule);
+  const configService = app.get(ConfigService);
+  const logger = new Logger('NestApplication');
 
-  // Enable CORS
+  // CORS
   app.enableCors({
     origin: '*',
     methods: 'GET,HEAD,PUT,PATCH,POST,DELETE',
     credentials: true,
   });
 
-  // Serve uploaded files statically
+  // Global prefix
+  app.setGlobalPrefix('api');
+
+  // Global interceptors
+  app.useGlobalInterceptors(new LoggerInterceptor());
+
+  // Static file serving for uploads
   app.useStaticAssets(join(process.cwd(), 'uploads'), {
     prefix: '/uploads',
   });
@@ -48,9 +58,16 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  const port = 3111// process.env.APP_PORT ?? 3100;
-  await app.listen(port);
-  console.log(`🚀 Application running on: http://localhost:${port}`);
-  console.log(`📚 Swagger docs: http://localhost:${port}/api/docs`);
+  const port =  3111 //configService.get<number>('app.port')!;
+  await app
+    .listen(port)
+    .then(() => {
+      logger.log(`Server running at http://localhost:${port}`);
+      logger.log(`Swagger docs: http://localhost:${port}/api/docs`);
+    })
+    .catch((error) => {
+      logger.error('Error starting server.');
+      logger.error(error);
+    });
 }
 bootstrap();
